@@ -1,0 +1,52 @@
+import cv2
+import numpy as np
+from matplotlib import pyplot as plt
+
+def analyze_confocal_image(image_path):
+    # Read the image
+    image = cv2.imread(image_path)
+
+    # Convert the image to grayscale
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Perform thresholding to segment the nuclei
+    ret, nucleus_thresh = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+    # Perform thresholding to segment the cytoplasm
+    ret, cytoplasm_thresh = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    # Perform morphological operations to enhance the segmentation
+    kernel = np.ones((3, 3), np.uint8)
+    nucleus_mask = cv2.morphologyEx(nucleus_thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+    cytoplasm_mask = cv2.morphologyEx(cytoplasm_thresh, cv2.MORPH_OPEN, kernel, iterations=2)
+
+    # Find contours of the nuclei
+    nucleus_contours, _ = cv2.findContours(nucleus_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Find contours of the cytoplasm
+    cytoplasm_contours, _ = cv2.findContours(cytoplasm_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Draw contours on the original image
+    nucleus_image = image.copy()
+    cytoplasm_image = image.copy()
+    cv2.drawContours(nucleus_image, nucleus_contours, -1, (0, 255, 0), 2)
+    cv2.drawContours(cytoplasm_image, cytoplasm_contours, -1, (0, 0, 255), 2)
+
+    # Count the number of nuclei and cytoplasmic regions
+    num_nuclei = len(nucleus_contours)
+    num_cytoplasm = len(cytoplasm_contours)
+
+    # Display the results
+    plt.subplot(131), plt.imshow(image[:, :, ::-1]), plt.title('Original Image')
+    plt.subplot(132), plt.imshow(nucleus_image[:, :, ::-1]), plt.title('Nuclei')
+    plt.subplot(133), plt.imshow(cytoplasm_image[:, :, ::-1]), plt.title('Cytoplasm')
+    plt.show()
+
+    print("Number of nuclei:", num_nuclei)
+    print("Number of cytoplasmic regions:", num_cytoplasm)
+
+# Path to the confocal image
+image_path = 'path/to/your/image.jpg'
+
+# Analyze the confocal image
+analyze_confocal_image(image_path)
